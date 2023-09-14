@@ -107,10 +107,32 @@ int main(void) {
     float*** est_cov_z = Matrix_gen(row_2, col_2, iter);     //for detecting location(scalar KF)
     float* est_cov_z_for_pos = (float*)malloc(iter*sizeof(float));      //cov for scalar KF
 
+    float tmp_values[10] = 0;
+    for (int i = 0; i < 10; i++) {
+
+
+        //measure position 10 times
+        //measu_pos_z[i][1][iter_temp] = 위치 측정 값코드;
+
+
+        tmp_values[i] = measu_pos_z[0][i][0];
+    }
+    average_pos_z[0][0][0] = recursive_average_filter(tmp_values, row_10);
+
+
     //var for first meas of altitude
     int first_alt = 1;      //altitude standard
     
     //initializing
+    est_state_x[0][0][0] = myAccelScaled.x;
+    est_cov_x[0][0][0] = R_mat[0][0];
+    est_state_y[0][0][0] = myAccelScaled.y;
+    est_cov_y[0][0][0] = R_mat[0][0];
+    est_state_z[0][0][0] = myAccelScaled.z;
+    est_cov_z[0][0][0] = R_mat[0][0];
+    //position initializing
+    est_state_z[0][2][0] = average_pos_z[0][0][0];
+    est_cov_z_for_pos[0] = R_scalar;
 
     //pseudo while
     while (1) {
@@ -228,11 +250,26 @@ int main(void) {
         printf("\n\n");
     }
     */
-    // free the memory
 
+    // free the memory
+    free(est_cov_z_for_pos);
+
+    Matrix_free(est_cov_z, row_2, iter);
     Matrix_free(est_state_z, row_3, iter);  // Free the allocated memory
+    Matrix_free(average_pos_z, row_1, iter);
+    Matrix_free(measu_pos_z, row_10, iter);
+    Matrix_free(measu_Ang_acc_z, row_1, iter);
+    Matrix_free(measu_acc_z, row_1, iter);
+
+    Matrix_free(est_cov_y, row_2, iter);
     Matrix_free(est_state_y, row_3, iter);  // Free the allocated memory
+    Matrix_free(measu_Ang_acc_y, row_1, iter);
+    Matrix_free(measu_acc_y, row_1, iter);
+
+    Matrix_free(est_cov_x, row_2, iter);
     Matrix_free(est_state_x, row_3, iter);  // Free the allocated memory
+    Matrix_free(measu_Ang_acc_x, row_1, iter);
+    Matrix_free(measu_acc_x, row_1, iter);
     return 0;
 }
 
