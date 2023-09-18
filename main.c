@@ -40,6 +40,7 @@ float** Matrix_multiplicator(float** matrix_1, float** matrix_2, int r1, int c1,
 KF_return KF_alg(float**F, float** H, float** R, float** esti_state_prev, float** esti_cov_prev, float** measu_state, float sigma, float del_t);
 scalar_KF_return scalar_KF_alg(float F_scalar, float H_scalar, float R_scalar, float esti_state_prev, float esti_cov_prev, float measu_state, float sigma_w, float del_t);
 
+
 //for return
 typedef struct
 {
@@ -47,6 +48,7 @@ typedef struct
     float** estimate_state;
     float** Kalman_Gain;
 }KF_return;
+
 typedef struct
 {
     float estimate_cov;
@@ -59,6 +61,7 @@ int main(void) {
     float altitude=1, press=1, temp=1;
     myAccelScaled myAccelScaled;
     myGyroScaled myGyroScaled;
+
 
     //by simulation, we should get optimal del_t
     float del_t = 0.1;  //it means 100ms in operation, but in HW, we use ms scale   
@@ -76,7 +79,7 @@ int main(void) {
     F_vec[0][0] = 1; F_vec[0][1] = del_t; F_vec[1][0] = 0; F_vec[1][1] = 1;
 
     //for altitude, scalar KF
-    float R_scalar = 0.05;  //by Average filter, var of R decrease into 1/10    //  in low power mode, its error var is 50cm 
+    float R_scalar = 0.025;  //by Average filter, var of R decrease into 1/10    //  in low power mode, its error var is 50cm 
     float H_scalar = 1, F_scalar = 1;
 
     //sigma_w is defined by differentation between 2-steps
@@ -134,6 +137,7 @@ int main(void) {
     est_state_z[0][2][0] = average_pos_z[0][0][0];
     est_cov_z_for_pos[0] = R_scalar;
 
+
     //pseudo while
     while (1) {
         //init alititude        to calculate difference of altitude
@@ -164,6 +168,7 @@ int main(void) {
             tmp_values[i] = measu_pos_z[iter_temp][i][0];
         }
         average_pos_z[iter_temp][0][0] = recursive_average_filter(tmp_values,row_10);
+
 
         //other code
         //about...
@@ -235,6 +240,18 @@ int main(void) {
 
 
         //memory free in here
+        Matrix_free_2dim(KF_z_acc_vel.Kalman_Gain, row_2);
+        Matrix_free_2dim(KF_z_acc_vel.estimate_state, row_2);
+        Matrix_free_2dim(KF_z_acc_vel.estimate_cov, row_2);
+
+        Matrix_free_2dim(KF_y_acc_vel.Kalman_Gain, row_2);
+        Matrix_free_2dim(KF_y_acc_vel.estimate_state, row_2);
+        Matrix_free_2dim(KF_y_acc_vel.estimate_cov, row_2);
+
+        Matrix_free_2dim(KF_x_acc_vel.Kalman_Gain, row_2);
+        Matrix_free_2dim(KF_x_acc_vel.estimate_state, row_2);
+        Matrix_free_2dim(KF_x_acc_vel.estimate_cov, row_2);
+
         iter_temp++;
     }
 
@@ -250,6 +267,13 @@ int main(void) {
         printf("\n\n");
     }
     */
+
+
+    //storage in sd card.
+
+
+
+
 
     // free the memory
     free(est_cov_z_for_pos);
@@ -270,9 +294,18 @@ int main(void) {
     Matrix_free(est_state_x, row_3, iter);  // Free the allocated memory
     Matrix_free(measu_Ang_acc_x, row_1, iter);
     Matrix_free(measu_acc_x, row_1, iter);
+
     return 0;
 }
 
+/*
+1. 모든 상수를 define 한 값으로 설정하기.
+2. 예외처리 어떤부분이 예외가 될지에 대해서 생각해보기.
+3. time cost optimization
+4. iteration돌때 예상했던 시간보다 오래걸리게 되는 부분에 대한 대처할수 있는 부분도 생각해보기.
+*/
+
+//최종수정시 iter_n param 앞으로 당기기 ->가독성
 float*** Matrix_gen(int row_n, int col_n, int iter_n) {
     float*** Ret_Matrix;
     Ret_Matrix = (float***)calloc(iter_n, sizeof(float**));
@@ -430,6 +463,8 @@ float** Matrix_adder(float** matrix_1, float** matrix_2, int row, int col, int o
             }
         }
     }
+    else
+        //예외처리 추가할 수 있게.
 
     for (int i = 0; i < row; i++) {
         free(matrix_2[i]);
@@ -443,6 +478,7 @@ float** Matrix_adder(float** matrix_1, float** matrix_2, int row, int col, int o
 
 
 //function for matrix multiplication
+//c1==r2         need revision   
 float** Matrix_multiplicator(float** matrix_1, float** matrix_2,int r1, int c1, int r2, int c2){
     float** result = (float**)calloc(r1, sizeof(float*));
     for (int i = 0; i < r1; i++) {
@@ -469,6 +505,8 @@ KF_return KF_alg(float** F, float** H, float** R, float** esti_state_prev, float
     KF.estimate_cov = Matrix_gen_2dim(row_2, col_2);
     KF.estimate_state = Matrix_gen_2dim(row_2, col_1);
     KF.Kalman_Gain = Matrix_gen_2dim(row_2, col_1);
+
+    //같은 사이즈를 가진 메모리를 돌려쓸수 있는 식으로 최적화를 진행해야할 것 같다_0915
     float** predict_cov = Matrix_gen_2dim(row_2, col_2);
     float** predict_state = Matrix_gen_2dim(row_2, col_1);
     float** transp_F = Matrix_gen_2dim(row_2, col_2);
@@ -484,6 +522,7 @@ KF_return KF_alg(float** F, float** H, float** R, float** esti_state_prev, float
     float** innov_Kal = Matrix_gen_2dim(row_2, col_1);
 
     float** renewal_cov_1 = Matrix_gen_2dim(row_2, col_2);
+
 
     //predict state
     predict_state = Matrix_multiplicator(F, esti_state_prev, row_2, col_2, row_2, col_1);
@@ -503,6 +542,7 @@ KF_return KF_alg(float** F, float** H, float** R, float** esti_state_prev, float
     inv_term_2 = Matrix_multiplicator(inv_term_1, transp_H, row_1, col_2, row_2, col_1);
     KF.Kalman_Gain = Matrix_multiplicator(predict_cov, transp_H, row_2, col_2, row_2, col_1);
     **inv_term_tot = 1 / (**inv_term_2);
+
     KF.Kalman_Gain = Matrix_multiplicator(KF.Kalman_Gain, inv_term_tot, row_2, col_1, row_1, col_1);
 
     //Estimation of state
@@ -532,7 +572,7 @@ KF_return KF_alg(float** F, float** H, float** R, float** esti_state_prev, float
     Matrix_free_2dim(predict_state, row_2);
     Matrix_free_2dim(predict_cov, row_2);
 
-    return KF;
+    return KF;//KF_return KF;   이 구조체에 대한 할당해제 문제를 더 찾아보기.
 }
 
 
