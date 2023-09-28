@@ -50,8 +50,7 @@ void Matrix_free(int*** matrix, int row_n, int iter_n);
 
 float** Matrix_gen_2dim(int row_n, int col_n);
 void Matrix_free_2dim(float** matrix, int row_n);
-
-float recursive_average_filter(float* values, int num_values, int index);
+float average_filter(float* values);
 float** inv_2x2(float** matrix);
 float** Transpose(float** matrix, int row, int col);
 float** Matrix_adder(float** matrix_1, float** matrix_2, int row, int col, int option);
@@ -158,7 +157,7 @@ int main(void) {
         measu_pos_z[0][i][0] = altitude;    // altitude는 매 횟수의 센서의 측정 변수로서 
         tmp_values[i] = measu_pos_z[0][i][0];
     }
-    standard_alt = recursive_average_filter(tmp_values, row_10);
+    standard_alt = average_filter(tmp_values);
     average_pos_z[0][0][0] = 0;     //relative altitude from lift off
 
     
@@ -196,7 +195,7 @@ int main(void) {
 
             tmp_values[i] = measu_pos_z[iter_temp][i][0];
         }
-        average_pos_z[iter_temp][0][0] = recursive_average_filter(tmp_values,row_10)-standard_alt;
+        average_pos_z[iter_temp][0][0] = average_filter(tmp_values)-standard_alt;
 
 
         //other code
@@ -486,6 +485,18 @@ void Matrix_free_2dim(float** matrix, int row_n) {
 }
 
 // this code should be replace to just Average Filter _Daemin Kang deadline 0928
+// 
+float average_filter(float* values) {
+    // Doesn't have any Exception handling 
+    float sum = 0;
+    // Calculate the initial sum
+    for (int i = 0; i < 10; i++) {
+        sum += values[i];
+    }
+    return sum / 10;
+}
+/*
+* 
 // recursive MAF.
 float recursive_average_filter(float* values, int index) {
 
@@ -497,6 +508,7 @@ float recursive_average_filter(float* values, int index) {
     previous_average = recursive_average_filter(values, index - 1);
     return (previous_average * index + values[index]) / (index + 1);
 }
+*/
 
 //function for inv in 2 x 2
 float** inv_2x2(float** matrix)
