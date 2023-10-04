@@ -50,10 +50,13 @@
 #define col_3 3
 #define row_10 10
 #define iter 1000
+#define iter_mem 10
+
 #define add 1
 #define substract 0
 #define math_pi 3.1415926535
 #define gravity_const 9.81
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -77,6 +80,7 @@ UART_HandleTypeDef huart2;
 float temp, press, altitude;
 float count;
 int second = 0;
+int tmp_count = 0;
 
 //for return
 typedef struct
@@ -269,21 +273,22 @@ int main(void)
   float** R_mat_gyro = Matrix_gen_2dim(row_1, col_1);
   float** H_vec_gyro = Matrix_gen_2dim(row_1, col_2);
   float** F_vec_gyro = Matrix_gen_2dim(row_2, col_2);
+
   R_mat_gyro[0][0] = 0.124;                                       //?��?���? ?��?��
   H_vec_gyro[0][0] = 1; H_vec_gyro[0][1] = 0;
   F_vec_gyro[0][0] = 1; F_vec_gyro[0][1] = 0; F_vec_gyro[1][0] = del_t; F_vec_gyro[1][1] = 1;
 
-  float*** measu_Ang_acc_x = Matrix_gen(row_1, col_1, iter);
-  float*** est_state_rho_x = Matrix_gen(row_2, col_1, iter);
-  float*** est_cov_rho_x = Matrix_gen(row_2, col_2, iter);
+  float*** measu_Ang_acc_x = Matrix_gen(row_1, col_1, iter_mem);
+  float*** est_state_rho_x = Matrix_gen(row_2, col_1, iter_mem);
+  float*** est_cov_rho_x = Matrix_gen(row_2, col_2, iter_mem);
 
-  float*** measu_Ang_acc_y = Matrix_gen(row_1, col_1, iter);
-  float*** est_state_pi_y = Matrix_gen(row_2, col_1, iter);
-  float*** est_cov_pi_y = Matrix_gen(row_2, col_2, iter);
+  float*** measu_Ang_acc_y = Matrix_gen(row_1, col_1, iter_mem);
+  float*** est_state_pi_y = Matrix_gen(row_2, col_1, iter_mem);
+  float*** est_cov_pi_y = Matrix_gen(row_2, col_2, iter_mem);
 
-  float*** measu_Ang_acc_z = Matrix_gen(row_1, col_1, iter);
-  float*** est_state_thea_z = Matrix_gen(row_2, col_1, iter);
-  float*** est_cov_thea_z = Matrix_gen(row_2, col_2, iter);
+  float*** measu_Ang_acc_z = Matrix_gen(row_1, col_1, iter_mem);
+  float*** est_state_thea_z = Matrix_gen(row_2, col_1, iter_mem);
+  float*** est_cov_thea_z = Matrix_gen(row_2, col_2, iter_mem);
 
   //initializing
   est_state_rho_x[0][0][0] = myGyroScaled.x;      //changed Gyro data
@@ -312,25 +317,25 @@ int main(void)
 
   //for X,Y
   //KF to estimate vel, acc. this cause linear approximation of postion of x,y
-  float*** measu_acc_x = Matrix_gen(row_1, col_1, iter);
-  float*** est_state_x = Matrix_gen(row_3, col_1, iter);  //in est_x;
-  float*** est_cov_x = Matrix_gen(row_2, col_2, iter);
+  float*** measu_acc_x = Matrix_gen(row_1, col_1, iter_mem);
+  float*** est_state_x = Matrix_gen(row_3, col_1, iter_mem);  //in est_x;
+  float*** est_cov_x = Matrix_gen(row_2, col_2, iter_mem);
 
-  float*** measu_acc_y = Matrix_gen(row_1, col_1, iter);
-  float*** est_state_y = Matrix_gen(row_3, col_1, iter);
-  float*** est_cov_y = Matrix_gen(row_2, col_2, iter);
+  float*** measu_acc_y = Matrix_gen(row_1, col_1, iter_mem);
+  float*** est_state_y = Matrix_gen(row_3, col_1, iter_mem);
+  float*** est_cov_y = Matrix_gen(row_2, col_2, iter_mem);
 
   //for Z
   //KF to estimate vel, acc. to store
   //scalar KF to estimate location based on BMP180 measurement data
-  float*** measu_acc_z = Matrix_gen(row_1, col_1, iter);
+  float*** measu_acc_z = Matrix_gen(row_1, col_1, iter_mem);
 
   float standard_alt;
-  float*** average_pos_z = Matrix_gen(row_1, col_1, iter);     //for barometer, we should apply Average filter
+  float*** average_pos_z = Matrix_gen(row_1, col_1, iter_mem);     //for barometer, we should apply Average filter
 
-  float*** est_state_z = Matrix_gen(row_3, col_1, iter);
-  float*** est_cov_z = Matrix_gen(row_2, col_2, iter);     //for detecting location(scalar KF)
-  float* est_cov_z_for_pos = (float*)malloc(iter*sizeof(float));      //cov for scalar KF
+  float*** est_state_z = Matrix_gen(row_3, col_1, iter_mem);
+  float*** est_cov_z = Matrix_gen(row_2, col_2, iter_mem);     //for detecting location(scalar KF)
+  float* est_cov_z_for_pos = (float*)malloc(iter_mem*sizeof(float));      //cov for scalar KF
 
   //init call sensing values
 
@@ -378,6 +383,8 @@ int main(void)
   /* Open file to write/ create a file if it doesn't exist */
   fresult = f_open(&fil, "file1.txt", FA_OPEN_ALWAYS | FA_READ | FA_WRITE);
 
+
+
   /* Writing text */
 
   /* USER CODE END 2 */
@@ -389,20 +396,20 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    startTick = SysTick->VAL; // ?��?�� ?���? ???��
+	  startTick = SysTick->VAL; // ?��?�� ?���? ???��
 
     // mpu6050 part
-	MPU6050_Get_Accel_Scale(&myAccelScaled);
-	MPU6050_Get_Gyro_Scale(&myGyroScaled);
+	  MPU6050_Get_Accel_Scale(&myAccelScaled);
+	  MPU6050_Get_Gyro_Scale(&myGyroScaled);
 
 
-    //store angular acc to matrix
-    //
-    // should elimnate off_set value of Gyro. vel.
-    //
-    measu_Ang_acc_x[iter_temp][0][0] = myGyroScaled.x;
-    measu_Ang_acc_y[iter_temp][0][0] = myGyroScaled.y;
-    measu_Ang_acc_z[iter_temp][0][0] = myGyroScaled.z;
+	//store angular acc to matrix
+	//
+	// should elimnate off_set value of Gyro. vel.
+	//
+	measu_Ang_acc_x[iter_temp][0][0] = myGyroScaled.x;
+	measu_Ang_acc_y[iter_temp][0][0] = myGyroScaled.y;
+	measu_Ang_acc_z[iter_temp][0][0] = myGyroScaled.z;
 
     //Average Filter to optimize noise      to get positon of z
     for (int i = 0; i < 10;i++) {
@@ -434,7 +441,9 @@ int main(void)
     //-> eliminate gravity comp
 
     //      2023 09 27 latest patch...
-	//
+
+
+
 	//for x pitch ; rho
 	KF_return KF_rho_x_vel_ang;
 	float sigma_w_rho_x = measu_Ang_acc_x[iter_temp][0][0] - measu_Ang_acc_x[iter_temp - 1][0][0];
@@ -468,7 +477,7 @@ int main(void)
 	//calculate acc comp by gravity
 	if (est_state_thea_z[iter_temp][1][0]>(math_pi / 4)) {
 		//calc with sine    /use rho and thea
-		lambda = (float)atan(tan((double)est_state_rho_x[iter_temp][1][0])/sin((double)est_state_thea_z[iter_temp][1][0]));
+		lambda = (float)atan(tan((double)est_state_rho_x[iter_temp][1][0]) / sin((double)est_state_thea_z[iter_temp][1][0]));
 	}
 	else {
 		//calc with cosine  /use pi and thea
@@ -540,8 +549,8 @@ int main(void)
 
 
 	//this code display values of position
-	printf("[ ACC_X : %.2f ]\n[ ACC_Y : %.2f ]\n[ ACC_Z : %.2f ]\n\n",est_state_x[iter_temp][2][0],est_state_y[iter_temp][2][0],est_state_z[iter_temp][2][0]);
-
+	printf("[ Pos_X : %.2f ]\n[ Pos_Y : %.2f ]\n[ Pos_Z : %.2f ]\n\n",est_state_x[iter_temp][2][0],est_state_y[iter_temp][2][0],est_state_z[iter_temp][2][0]);
+	printf("[ Ang_X : %.2f ]\n[ Ang_Y : %.2f ]\n[ Ang_Z : %.2f ]\n\n",est_state_rho_x[iter_temp][1][0],est_state_pi_y[iter_temp][1][0],est_state_thea_z[iter_temp][1][0]);
 
 
 
@@ -640,31 +649,6 @@ int main(void)
             }*/
 
 
-      //free dy. memory...
-      //memory free in here
-	  Matrix_free_2dim(KF_z_acc_vel.Kalman_Gain, row_2);
-	  Matrix_free_2dim(KF_z_acc_vel.estimate_state, row_2);
-	  Matrix_free_2dim(KF_z_acc_vel.estimate_cov, row_2);
-
-	  Matrix_free_2dim(KF_y_acc_vel.Kalman_Gain, row_2);
-	  Matrix_free_2dim(KF_y_acc_vel.estimate_state, row_2);
-	  Matrix_free_2dim(KF_y_acc_vel.estimate_cov, row_2);
-
-	  Matrix_free_2dim(KF_x_acc_vel.Kalman_Gain, row_2);
-	  Matrix_free_2dim(KF_x_acc_vel.estimate_state, row_2);
-	  Matrix_free_2dim(KF_x_acc_vel.estimate_cov, row_2);
-
-
-	  //to escape endless while.
-
-	  if (iter_temp == iter) {
-	  	break;
-	  }
-	  //upper iter 500 and less than 3 m
-	  if ((average_pos_z[iter_temp][0][0] < 3) && (iter_temp > 500)) {
-	  	break;
-	  }
-	  iter_temp++;
     }
     // deploy Parachute part^^7
     // sdcard part
@@ -686,13 +670,55 @@ int main(void)
     }
 
 
+    //free dy. memory...
+    //memory free in here
+	Matrix_free_2dim(KF_z_acc_vel.Kalman_Gain, row_2);
+	Matrix_free_2dim(KF_z_acc_vel.estimate_state, row_2);
+	Matrix_free_2dim(KF_z_acc_vel.estimate_cov, row_2);
 
+	Matrix_free_2dim(KF_y_acc_vel.Kalman_Gain, row_2);
+	Matrix_free_2dim(KF_y_acc_vel.estimate_state, row_2);
+	Matrix_free_2dim(KF_y_acc_vel.estimate_cov, row_2);
+
+	Matrix_free_2dim(KF_x_acc_vel.Kalman_Gain, row_2);
+	Matrix_free_2dim(KF_x_acc_vel.estimate_state, row_2);
+	Matrix_free_2dim(KF_x_acc_vel.estimate_cov, row_2);
+
+
+	//to escape endless while.
+
+	if (iter_temp*tmp_count == iter) {	//when arrives in 1000, escape while
+	break;
+	}
+	//upper iter 500 and less than 3 m
+	if ((average_pos_z[iter_temp][0][0] < 3) && (iter_temp > 500)) {
+	break;
+	}
+
+
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	////caution : should store in sd card when iter_temp arrives to value of 10
+	if (iter_temp == 10)
+		iter_temp = 0;
+	iter_temp++;
+	tmp_count++;
     // sdcard part
   }
+
   // sdcard part
   if (fresult == FR_OK)
   {
-    fresult = f_close(&fil);
+	fresult = f_close(&fil);
   }
   // sdcard part
 
@@ -700,34 +726,34 @@ int main(void)
   // free the memory
   free(est_cov_z_for_pos);
 
-  Matrix_free(est_cov_z, row_2, iter);
-  Matrix_free(est_state_z, row_3, iter);  // Free the allocated memory
-  Matrix_free(average_pos_z, row_1, iter);
-  Matrix_free(measu_acc_z, row_1, iter);
+  Matrix_free(est_cov_z, row_2, iter_mem);
+  Matrix_free(est_state_z, row_3, iter_mem);  // Free the allocated memory
+  Matrix_free(average_pos_z, row_1, iter_mem);
+  Matrix_free(measu_acc_z, row_1, iter_mem);
 
-  Matrix_free(est_cov_y, row_2, iter);
-  Matrix_free(est_state_y, row_3, iter);  // Free the allocated memory
-  Matrix_free(measu_acc_y, row_1, iter);
+  Matrix_free(est_cov_y, row_2, iter_mem);
+  Matrix_free(est_state_y, row_3, iter_mem);  // Free the allocated memory
+  Matrix_free(measu_acc_y, row_1, iter_mem);
 
-  Matrix_free(est_cov_x, row_2, iter);
-  Matrix_free(est_state_x, row_3, iter);  // Free the allocated memory
-  Matrix_free(measu_acc_x, row_1, iter);
+  Matrix_free(est_cov_x, row_2, iter_mem);
+  Matrix_free(est_state_x, row_3, iter_mem);  // Free the allocated memory
+  Matrix_free(measu_acc_x, row_1, iter_mem);
 
   Matrix_free_2dim(F_vec, row_2);
   Matrix_free_2dim(H_vec, row_1);
   Matrix_free_2dim(R_mat, row_1);
 
-  Matrix_free(est_cov_thea_z, row_2, col_2);
-  Matrix_free(est_state_thea_z, row_2, col_1);
-  Matrix_free(measu_Ang_acc_z, row_1, iter);
+  Matrix_free(est_cov_thea_z, row_2, iter_mem);
+  Matrix_free(est_state_thea_z, row_2, iter_mem);
+  Matrix_free(measu_Ang_acc_z, row_1, iter_mem);
 
-  Matrix_free(est_cov_pi_y, row_2, col_2);
-  Matrix_free(est_state_pi_y, row_2, col_1);
-  Matrix_free(measu_Ang_acc_y, row_1, iter);
+  Matrix_free(est_cov_pi_y, row_2, iter_mem);
+  Matrix_free(est_state_pi_y, row_2, iter_mem);
+  Matrix_free(measu_Ang_acc_y, row_1, iter_mem);
 
-  Matrix_free(est_cov_rho_x, row_2, col_2);
-  Matrix_free(est_state_rho_x, row_2, col_1);
-  Matrix_free(measu_Ang_acc_x, row_1, iter);
+  Matrix_free(est_cov_rho_x, row_2, iter_mem);
+  Matrix_free(est_state_rho_x, row_2, iter_mem);
+  Matrix_free(measu_Ang_acc_x, row_1, iter_mem);
 
   Matrix_free_2dim(F_vec_gyro, row_2);
   Matrix_free_2dim(H_vec_gyro, row_1);
