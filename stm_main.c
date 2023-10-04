@@ -500,7 +500,7 @@ int main(void)
 	est_state_x[iter_temp][1][0] = KF_x_acc_vel.estimate_state[1][0];        //vel
 	est_state_x[iter_temp][2][0] = est_state_x[iter_temp - 1][2][0] + est_state_x[iter_temp - 1][1][0] * del_t + est_state_x[iter_temp - 1][0][0] * del_t * del_t / 2;
 
-	
+
 	//for y
 	KF_return KF_y_acc_vel;
 	float sigma_w_y = measu_acc_y[iter_temp][0][0] - measu_acc_y[iter_temp - 1][0][0];
@@ -513,7 +513,7 @@ int main(void)
 	est_state_y[iter_temp][1][0] = KF_y_acc_vel.estimate_state[1][0];        //vel
 	est_state_y[iter_temp][2][0] = est_state_y[iter_temp - 1][2][0] + est_state_y[iter_temp - 1][1][0] * del_t + est_state_y[iter_temp - 1][0][0] * del_t * del_t / 2;
 
-	
+
 	//for z
 	KF_return KF_z_acc_vel;
 	scalar_KF_return KF_z_pos;
@@ -539,7 +539,8 @@ int main(void)
 
 
 
-
+	//this code display values of position
+	printf("[ ACC_X : %.2f ]\n[ ACC_Y : %.2f ]\n[ ACC_Z : %.2f ]\n\n",est_state_x[iter_temp][2][0],est_state_y[iter_temp][2][0],est_state_z[iter_temp][2][0]);
 
 
 
