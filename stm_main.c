@@ -500,6 +500,7 @@ int main(void)
 	est_state_x[iter_temp][1][0] = KF_x_acc_vel.estimate_state[1][0];        //vel
 	est_state_x[iter_temp][2][0] = est_state_x[iter_temp - 1][2][0] + est_state_x[iter_temp - 1][1][0] * del_t + est_state_x[iter_temp - 1][0][0] * del_t * del_t / 2;
 
+	
 	//for y
 	KF_return KF_y_acc_vel;
 	float sigma_w_y = measu_acc_y[iter_temp][0][0] - measu_acc_y[iter_temp - 1][0][0];
@@ -512,6 +513,7 @@ int main(void)
 	est_state_y[iter_temp][1][0] = KF_y_acc_vel.estimate_state[1][0];        //vel
 	est_state_y[iter_temp][2][0] = est_state_y[iter_temp - 1][2][0] + est_state_y[iter_temp - 1][1][0] * del_t + est_state_y[iter_temp - 1][0][0] * del_t * del_t / 2;
 
+	
 	//for z
 	KF_return KF_z_acc_vel;
 	scalar_KF_return KF_z_pos;
@@ -536,14 +538,7 @@ int main(void)
 	est_cov_z_for_pos[iter_temp] = KF_z_pos.estimate_cov;
 
 
-	//to escape endless while.
-	if (iter_temp == iter) {
-		break;
-	}
-	//upper iter 500 and less than 3 m
-	if ((average_pos_z[iter_temp][0][0] < 3) && (iter_temp > 500)) {
-		break;
-	}
+
 
 
 
@@ -658,6 +653,16 @@ int main(void)
 	  Matrix_free_2dim(KF_x_acc_vel.estimate_state, row_2);
 	  Matrix_free_2dim(KF_x_acc_vel.estimate_cov, row_2);
 
+
+	  //to escape endless while.
+
+	  if (iter_temp == iter) {
+	  	break;
+	  }
+	  //upper iter 500 and less than 3 m
+	  if ((average_pos_z[iter_temp][0][0] < 3) && (iter_temp > 500)) {
+	  	break;
+	  }
 	  iter_temp++;
     }
     // deploy Parachute part^^7
@@ -678,6 +683,8 @@ int main(void)
       fresult = f_write(&fil, buffer, strlen(buffer), &bw); // Write the string to file
       f_sync(&fil);                                         // Ensure data is written and saved
     }
+
+
 
     // sdcard part
   }
