@@ -17,10 +17,8 @@
 //do not Dynamic allocation in KF algorithms... user heap is extra small
 
 //define our matrices as global array.
-// 
-//float test_mat[iter_temp][row_2][col_2] = { 0 };
-//float for_average_Arr[row_10] = {1,2,1,2,1,2,1,2,1,2};
-float noise[] = {0.124};
+
+float noise[] = {0.124};		//noise value could be replaced into new value.
 static float values_1[] = { 1.0, 0.0 };
 static float values_2[] = { dt, 1.0 };
 
@@ -32,7 +30,7 @@ static float* H_mat[row_1] = {
 	values_1
 };
 
-float* R_mat[row_1] = {
+static float* R_mat[row_1] = {
 	noise
 };
 
@@ -69,6 +67,8 @@ float** Transpose(float* matrix[], int row, int col);
 float** Matrix_adder(float* matrix_1[], float* matrix_2[], int row, int col, int option);
 
 float** Matrix_multiplicator(float* matrix_1[], float* matrix_2[], int r1, int c1, int r2, int c2);
+
+void KF_alg(float* esti_state_prev[], float* esti_cov_prev[], float* measu_state[], float sigma, float* esti_state_out[], float* esti_cov_out[]);
 
 int main()
 {
@@ -131,7 +131,20 @@ int main()
 	printf("[Transpose_F_mat]\n");
 	float** trans_F = Transpose(F_mat, row_2, col_2);
 	disp_mat_2dim(trans_F, row_2, col_2);
+	
 
+	//testing multiplication
+	printf("[Mult_H_with_F]\n");
+	float** mult_HF = Matrix_multiplicator(H_mat, F_mat, row_1, col_2, row_2, col_2);
+	disp_mat_2dim(mult_HF, row_1, col_2);
+
+	//testing adder
+	printf("[Add]\n");
+	float** adder = Matrix_adder(H_mat, H_mat, row_1, col_2, add);
+	disp_mat_2dim(adder,row_1, col_2);
+	printf("[Substract]\n");
+	adder = Matrix_adder(H_mat, H_mat, row_1, col_2, substract);
+	disp_mat_2dim(adder, row_1, col_2);
 	return 0;
 }
 
@@ -194,17 +207,21 @@ float** Transpose(float* matrix[], int row, int col)
 //matrix_1 : output / matrix_1, matrix_2 : paramter for operation.
 float** Matrix_adder(float* matrix_1[], float* matrix_2[], int row, int col, int option)
 {
+	float** result = (float**)calloc(row, sizeof(float*));
+	for (int i = 0; i < row; i++) {
+		result[i] = (float*)calloc(col, sizeof(float));
+	}
 	if (option == 1) {//add
 		for (int i = 0; i < row; i++) {
 			for (int j = 0; j < col; j++) {
-				matrix_1[i][j] += matrix_2[i][j];
+				result[i][j] = matrix_1[i][j] + matrix_2[i][j];
 			}
 		}
 	}
 	else if (option == 0) {//substract
 		for (int i = 0; i < row; i++) {
 			for (int j = 0; j < col; j++) {
-				matrix_1[i][j] -= matrix_2[i][j];
+				result[i][j] = matrix_1[i][j] - matrix_2[i][j];
 			}
 		}
 	}
@@ -212,6 +229,7 @@ float** Matrix_adder(float* matrix_1[], float* matrix_2[], int row, int col, int
 		//warning
 		printf("[adder function error]\n");
 	}
+	return result;
 }
 
 float** Matrix_multiplicator(float* matrix_1[], float* matrix_2[], int r1, int c1, int r2, int c2) {
@@ -238,4 +256,17 @@ float** Matrix_multiplicator(float* matrix_1[], float* matrix_2[], int r1, int c
 	}
 
 	return result;
+}
+
+void KF_alg(float* esti_state_prev[], float* esti_cov_prev[], float* measu_state[], float sigma, float* esti_state_out[], float* esti_cov_out[]) {
+	//pred_state
+		
+	//pred_cov
+	
+	//Kalman_Gain
+	
+	//esti_state
+	
+	//esti_cov
+
 }
