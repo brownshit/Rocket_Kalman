@@ -324,12 +324,15 @@ void KF_alg(float* esti_state_prev[], float* esti_cov_prev[], float* measu_state
 	for (int i = 0; i < col_1; i++) {
 		free(trans_process_noise[i]);
 	}
+	free(trans_process_noise);
 	for (int i = 0; i < col_2; i++) {
 		free(trans_H[i]);
 	}
+	free(trans_H);
 	for (int i = 0; i < col_2; i++) {
 		free(trans_F[i]);
 	}
+	free(trans_F);
 
 	//free pred_state, pred_cov, Kalman Gain
 	for (int i = 0; i < col_2; i++) {
