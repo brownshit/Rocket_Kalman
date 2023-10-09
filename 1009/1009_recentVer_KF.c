@@ -164,6 +164,14 @@ float alt_z_measu[2] = { 0,0 };
 //by acc and vel, get pos by linear approximation
 float pos_x = 0; float pos_y = 0; float pos_z = 0;
 
+float Q_mat[row_2][col_2] = { 0 };
+float inv_term_sub[row_1][col_2] = { 0 };
+float inv_term[row_1][col_1] = { 0 };
+float HX[row_1][col_1] = { 0 };
+float innov[row_2][col_1] = { 0 };
+float KH[row_2][col_2] = { 0 };
+
+
 //fucntion define.
 void disp_mat_2dim(float* mat[], int row, int col);
 void disp_mat(float mat[][row_2][col_2], int iter_inner, int row, int col);
@@ -466,51 +474,94 @@ void KF_alg(float* esti_state_prev[], float* esti_cov_prev[], float* measu_state
 		noise_w2
 	};
 	float** trans_process_noise = Transpose(process_noise, row_2, col_1);
-	float** Q_mat = Matrix_multiplicator(process_noise, trans_process_noise, row_2, col_1, row_1, col_2);
+		//float** Q_mat = Matrix_multiplicator(process_noise, trans_process_noise, row_2, col_1, row_1, col_2);
+	
+	Q_mat[0][0] = process_noise[0][0] * trans_process_noise[0][0];
+	Q_mat[0][1] = process_noise[0][0] * trans_process_noise[0][1];
+	Q_mat[1][0] = process_noise[1][0] * trans_process_noise[0][0];
+	Q_mat[1][1] = process_noise[1][0] * trans_process_noise[0][1];
 
 	//pred_state
-	pred_state = Matrix_multiplicator(F_mat, esti_state_prev, row_2, col_2, row_2, col_1);
-	
+		//pred_state = Matrix_multiplicator(F_mat, esti_state_prev, row_2, col_2, row_2, col_1);
+	pred_state[0][0] = F_mat[0][0] * esti_state_prev[0][0] + F_mat[0][1] * esti_state_prev[1][0];
+	pred_state[1][0] = F_mat[1][0] * esti_state_prev[0][0] + F_mat[1][1] * esti_state_prev[1][0];
+
 	//pred_cov
-	pred_cov = Matrix_multiplicator(F_mat, esti_cov_prev, row_2, col_2, row_2, col_2);
-	pred_cov = Matrix_multiplicator(pred_cov, trans_F, row_2, col_2, row_2, col_2);
-	pred_cov = Matrix_adder(pred_cov, Q_mat, row_2, col_2, add);
-	
+		//pred_cov = Matrix_multiplicator(F_mat, esti_cov_prev, row_2, col_2, row_2, col_2);
+	pred_cov[0][0] = F_mat[0][0] * esti_cov_prev[0][0] + F_mat[0][1] * esti_cov_prev[1][0];
+	pred_cov[0][1] = F_mat[0][0] * esti_cov_prev[0][1] + F_mat[0][1] * esti_cov_prev[1][1];
+	pred_cov[1][0] = F_mat[1][0] * esti_cov_prev[0][0] + F_mat[1][1] * esti_cov_prev[1][0];
+	pred_cov[1][1] = F_mat[1][0] * esti_cov_prev[0][1] + F_mat[1][1] * esti_cov_prev[1][1];
+		//pred_cov = Matrix_multiplicator(pred_cov, trans_F, row_2, col_2, row_2, col_2);
+	pred_cov[0][0] = pred_cov[0][0] * trans_F[0][0] + pred_cov[0][1] * trans_F[1][0];
+	pred_cov[0][1] = pred_cov[0][0] * trans_F[0][1] + pred_cov[0][1] * trans_F[1][1];
+	pred_cov[1][0] = pred_cov[1][0] * trans_F[0][0] + pred_cov[1][1] * trans_F[1][0];
+	pred_cov[1][1] = pred_cov[1][0] * trans_F[0][1] + pred_cov[1][1] * trans_F[1][1];
+		//pred_cov = Matrix_adder(pred_cov, Q_mat, row_2, col_2, add);
+	pred_cov[0][0] = pred_cov[0][0] + Q_mat[0][0];
+	pred_cov[0][1] = pred_cov[0][1] + Q_mat[0][1];
+	pred_cov[1][0] = pred_cov[1][0] + Q_mat[1][0];
+	pred_cov[1][1] = pred_cov[1][1] + Q_mat[1][1];
+
 	//Kalman_Gain
-	float** inv_term_sub = Matrix_multiplicator(H_mat, pred_cov, row_1, col_2, row_2, col_2);
-	float** inv_term = Matrix_multiplicator(inv_term_sub, trans_H, row_1, col_2, row_2, col_1);
-	inv_term = Matrix_adder(inv_term,R_mat, row_1, col_1, add);
-	inv_term[0][0] = 1 / (inv_term[0][0]);
+	
+		//= Matrix_multiplicator(H_mat, pred_cov, row_1, col_2, row_2, col_2);
+	inv_term_sub[0][0] = H_mat[0][0] * pred_cov[0][0] + H_mat[0][1] * pred_cov[1][0];
+	inv_term_sub[0][1] = H_mat[0][0] * pred_cov[0][1] + H_mat[0][1] * pred_cov[1][1];
+
+	
+		//= Matrix_multiplicator(inv_term_sub, trans_H, row_1, col_2, row_2, col_1);
+	inv_term[0][0] = inv_term_sub[0][0] * trans_H[0][0] + inv_term_sub[0][1] * trans_H[1][0];
+		//inv_term = Matrix_adder(inv_term,R_mat, row_1, col_1, add);
+		//inv_term[0][0] = 1 / (inv_term[0][0]);
+	inv_term[0][0] = 1 / (inv_term[0][0] + R_mat[0][0]);
+	
 	//2x1 matrix.
-	Kalman_Gain = Matrix_multiplicator(pred_cov, trans_H, row_2, col_2, row_2, col_1);
-	Kalman_Gain = Matrix_multiplicator(Kalman_Gain, inv_term, row_2, col_1, row_1, col_1);
+		//Kalman_Gain = Matrix_multiplicator(pred_cov, trans_H, row_2, col_2, row_2, col_1);
+	Kalman_Gain[0][0] = pred_cov[0][0] * trans_H[0][0] + pred_cov[0][1] * trans_H[1][0];
+	Kalman_Gain[1][0] = pred_cov[1][0] * trans_H[0][0] + pred_cov[1][1] * trans_H[1][0];
+		//Kalman_Gain = Matrix_multiplicator(Kalman_Gain, inv_term, row_2, col_1, row_1, col_1);
+	Kalman_Gain[0][0] = Kalman_Gain[0][0] * inv_term[0][0];
+	Kalman_Gain[1][0] = Kalman_Gain[1][0] * inv_term[0][0];
+
+
+
+
 
 	//esti_state
 	//reuse inv_term to calc innovation term.
-	float** HX = Matrix_multiplicator(H_mat, pred_state, row_1, col_2, row_2, col_1);
-	inv_term = Matrix_adder(measu_state, HX, row_1, col_1, substract);
-	float** innov = Matrix_multiplicator(Kalman_Gain, inv_term, row_2, col_1, row_1, col_1);
-	esti_state_out = Matrix_adder(pred_state, innov, row_2, col_1, add);
+	
+		//Matrix_multiplicator(H_mat, pred_state, row_1, col_2, row_2, col_1);
+	HX[0][0] = H_mat[0][0] * pred_state[0][0] + H_mat[0][1] * pred_state[1][0];
+		//inv_term = Matrix_adder(measu_state, HX, row_1, col_1, substract);
+	inv_term[0][0] = measu_state[0][0] - HX[0][0];
+	
+		//= Matrix_multiplicator(Kalman_Gain, inv_term, row_2, col_1, row_1, col_1);
+	innov[0][0] = Kalman_Gain[0][0] * inv_term[0][0];
+	innov[1][0] = Kalman_Gain[1][0] * inv_term[0][0];
+		//esti_state_out = Matrix_adder(pred_state, innov, row_2, col_1, add);
+	esti_state_out[0][0] = pred_state[0][0] + innov[0][0];
+	esti_state_out[1][0] = pred_state[1][0] + innov[1][0];
 
 	//esti_cov
-	float** KH = Matrix_multiplicator(Kalman_Gain,H_mat, row_2, col_1, row_1, col_2);
-	KH = Matrix_multiplicator(KH, pred_cov, row_2, col_2, row_2, col_2);
-	esti_cov_out = Matrix_adder(pred_cov, KH, row_2, col_2, substract);
+	
+		//= Matrix_multiplicator(Kalman_Gain, H_mat, row_2, col_1, row_1, col_2);
+	KH[0][0] = Kalman_Gain[0][0] * H_mat[0][0];
+	KH[0][1] = Kalman_Gain[0][0] * H_mat[0][1];
+	KH[1][0] = Kalman_Gain[1][0] * H_mat[0][0];
+	KH[1][1] = Kalman_Gain[1][0] * H_mat[0][1];
+		//KH = Matrix_multiplicator(KH, pred_cov, row_2, col_2, row_2, col_2);
+	KH[0][0] = KH[0][0] * pred_cov[0][0] + KH[0][1] * pred_cov[1][0];
+	KH[0][1] = KH[0][0] * pred_cov[0][1] + KH[0][1] * pred_cov[1][1];
+	KH[1][0] = KH[1][0] * pred_cov[0][0] + KH[1][1] * pred_cov[1][0];
+	KH[1][1] = KH[1][0] * pred_cov[0][1] + KH[1][1] * pred_cov[1][1];
+		//esti_cov_out = Matrix_adder(pred_cov, KH, row_2, col_2, substract);
+	esti_cov_out[0][0] = pred_cov[0][0] - KH[0][0];
+	esti_cov_out[0][1] = pred_cov[0][1] - KH[0][1];
+	esti_cov_out[1][0] = pred_cov[1][0] - KH[1][0];
+	esti_cov_out[1][1] = pred_cov[1][1] - KH[1][1];
 
 	//free memory using Transpose..!
-	for (int i = 0; i < col_1; i++) {
-		free(trans_process_noise[i]);
-	}
-	free(trans_process_noise);
-	for (int i = 0; i < col_1; i++) {
-		free(trans_process_noise[i]);
-	}
-	free(trans_process_noise);
-	for (int i = 0; i < col_1; i++) {
-		free(trans_process_noise[i]);
-	}
-	free(trans_process_noise);
-
 	for (int i = 0; i < col_1; i++) {
 		free(trans_process_noise[i]);
 	}
@@ -538,6 +589,8 @@ void KF_alg(float* esti_state_prev[], float* esti_cov_prev[], float* measu_state
 	}
 	free(pred_state);
 }
+
+
 
 void scalar_KF(float* prev_alt, float* prev_alt_cov, float measu_alt, float* esti_alt, float* esti_alt_cov) {
 	float R_scalar = 0.025;  //by Average filter, var of R decrease into 1/10    //  in low power mode, its error var is 50cm 
